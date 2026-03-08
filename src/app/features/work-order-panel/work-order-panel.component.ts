@@ -91,9 +91,25 @@ export class WorkOrderPanelComponent implements OnChanges {
   );
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['visible'] && this.visible) {
+    if (changes['visible']) {
+      console.log('[Panel] visible changed →', this.visible, '| mode:', this.mode);
+    }
+
+    const panelJustOpened = changes['visible'] && this.visible;
+    const relevantInputChanged = this.visible && (
+      changes['selectedOrder'] ||
+      changes['mode'] ||
+      changes['prefillStartDateIso'] ||
+      changes['prefillWorkCenterId']
+    );
+
+    if (panelJustOpened || relevantInputChanged) {
       this.resetForm();
     }
+  }
+
+  onDateClick(field: 'start' | 'end'): void {
+    console.log(`[Panel] ${field} date field clicked`);
   }
 
   closePanel(): void { this.panelClosed.emit(); }

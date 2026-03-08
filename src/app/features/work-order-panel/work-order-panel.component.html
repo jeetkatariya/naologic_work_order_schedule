@@ -64,8 +64,10 @@
         formControlName="endDate"
         ngbDatepicker
         #endDp="ngbDatepicker"
+        container="body"
+        placement="top-start"
         autocomplete="off"
-        (click)="endDp.open()"
+        (click)="onDateClick('end'); endDp.open()"
         readonly
       />
       <p class="field__error" *ngIf="form.controls.endDate.touched && form.controls.endDate.invalid">
@@ -82,8 +84,9 @@
         formControlName="startDate"
         ngbDatepicker
         #startDp="ngbDatepicker"
+        container="body"
         autocomplete="off"
-        (click)="startDp.open()"
+        (click)="onDateClick('start'); startDp.open()"
         readonly
       />
       <p class="field__error" *ngIf="form.controls.startDate.touched && form.controls.startDate.invalid">

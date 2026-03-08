@@ -1,7 +1,7 @@
 <div class="page-wrap">
 
   <header class="toolbar">
-    <div class="naologic-logo">NAOLOGIC</div>
+    <img class="naologic-logo" src="assets/designs/Group 3-1.png" alt="Naologic">
     <h1 class="toolbar__title">Work Orders</h1>
 
     <div class="toolbar__controls">
@@ -72,13 +72,13 @@
         >
           {{ seg.label }}
         </div>
+      </div>
 
-        <div
-          class="tl-period-capsule"
-          [style.left.px]="todayIndicatorX()"
-        >
-          {{ currentPeriodLabel() }}
-        </div>
+      <div
+        class="tl-period-capsule"
+        [style.left.px]="todayIndicatorX()"
+      >
+        {{ currentPeriodLabel() }}
       </div>
 
       <div class="tl-today-line" [style.left.px]="todayIndicatorX()"></div>
@@ -99,7 +99,8 @@
           class="wo-bar"
           *ngFor="let order of getOrdersForCenter(center.docId); trackBy: trackByOrder"
           [ngStyle]="getBarStyle(order)"
-          [ngClass]="'wo-bar--' + order.data.status"
+          [ngClass]="['wo-bar--' + order.data.status, openMenuOrderId() === order.docId ? 'wo-bar--menu-open' : '']"
+          [class.wo-bar--compact]="isCompactBar(order)"
           [style.z-index]="openMenuOrderId() === order.docId ? 50 : null"
           (mouseenter)="showTooltip($event, order)"
           (mousemove)="moveTooltip($event)"
@@ -139,8 +140,16 @@
           *ngIf="ghostRowId() === center.docId && !openMenuOrderId()"
           [style.left.px]="ghostLeft()"
           [style.width.px]="ghostWidth()"
-        >Click to add dates</div>
+        >
+          <div class="wo-ghost-bar__label">Click to add dates</div>
+        </div>
       </div>
+
+    <div
+      class="tl-grid-extend"
+      [style.width.px]="totalWidth()"
+      [style.background-size]="gridColumnWidth() + 'px 100%'"
+    ></div>
 
     </div>
   </div>
