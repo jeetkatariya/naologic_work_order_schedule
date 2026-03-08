@@ -107,21 +107,6 @@ export class TimelinePageComponent implements AfterViewInit {
 
   ngAfterViewInit(): void {
     this.centerToday();
-
-    const range = this.visibleRange();
-    console.group('[TimelinePage] View initialised');
-    console.log(`Zoom: ${this.zoom()} | dayWidth: ${this.dayWidth()}px`);
-    console.log(`Visible range: ${range.startDate.toDateString()} → ${range.endDate.toDateString()}`);
-    console.log(`Total columns: ${this.columns().length} | totalWidth: ${this.totalWidth()}px`);
-    console.log(`Today indicator X: ${this.todayIndicatorX()}px`);
-
-    for (const center of this.workCenters()) {
-      const bars = this.getOrdersForCenter(center.docId);
-      console.log(`  Row "${center.data.name}" (${center.docId}): ${bars.length} bar(s)`,
-        bars.map(o => o.data.name)
-      );
-    }
-    console.groupEnd();
   }
 
 
@@ -205,33 +190,6 @@ export class TimelinePageComponent implements AfterViewInit {
   toggleMenu(orderId: string): void {
     this.openMenuOrderId.set(this.openMenuOrderId() === orderId ? null : orderId);
     this.ghostRowId.set(null);
-    const newId = this.openMenuOrderId();
-    console.log('[toggleMenu] openMenuOrderId =', newId);
-
-    if (newId) {
-      // After Angular renders, inspect the actual DOM z-index
-      setTimeout(() => {
-        const bar = document.querySelector(`.wo-bar--menu-open`) as HTMLElement | null;
-        const menu = document.querySelector(`.wo-menu`) as HTMLElement | null;
-        if (bar) {
-          const cs = getComputedStyle(bar);
-          console.log('[DEBUG] .wo-bar--menu-open found:', bar);
-          console.log('[DEBUG]   z-index (computed):', cs.zIndex);
-          console.log('[DEBUG]   position:', cs.position);
-          console.log('[DEBUG]   classes:', bar.className);
-        } else {
-          console.warn('[DEBUG] .wo-bar--menu-open NOT found in DOM');
-        }
-        if (menu) {
-          const cs = getComputedStyle(menu);
-          console.log('[DEBUG] .wo-menu found:', menu);
-          console.log('[DEBUG]   z-index (computed):', cs.zIndex);
-          console.log('[DEBUG]   offsetParent:', menu.offsetParent);
-        } else {
-          console.warn('[DEBUG] .wo-menu NOT found in DOM');
-        }
-      }, 50);
-    }
   }
 
   jumpToToday(): void {
