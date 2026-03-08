@@ -46,7 +46,7 @@
   // Shadows
   --shadow-card:      0 1px 4px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.04);
   --shadow-panel:     -4px 0 32px rgba(15, 23, 42, 0.10);
-  --shadow-menu:      0 4px 16px rgba(15, 23, 42, 0.10), 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-menu:      0 8px 28px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.10);
   --shadow-bar:       0 1px 3px rgba(15, 23, 42, 0.06);
   --shadow-bar-hover: 0 4px 10px rgba(15, 23, 42, 0.10);
 
@@ -57,8 +57,8 @@
 
   // Layout
   --left-col-width: 240px;
-  --row-height:     68px;
-  --header-height:  48px;
+  --row-height:     48px;
+  --header-height:  33px;
 }
 
 // ─── Reset ────────────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ html, body {
   font-size: 14px;
   font-family: var(--font-body);
   background: var(--color-surface) !important;
-  box-shadow: none !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
   cursor: pointer;
 }
 
@@ -129,6 +129,8 @@ ngb-datepicker {
   box-shadow: var(--shadow-menu) !important;
   font-family: var(--font-body);
   font-size: 13px;
+  background: #ffffff !important;
+  z-index: 1060 !important;
 }
 
 .ngb-dp-day .btn-light {

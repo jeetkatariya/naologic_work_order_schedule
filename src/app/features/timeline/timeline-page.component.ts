@@ -87,9 +87,12 @@ export class TimelinePageComponent implements AfterViewInit {
   readonly tooltipX     = signal(0);
   readonly tooltipY     = signal(0);
 
-  readonly todayIndicatorX = computed(() =>
-    dateToX(new Date(), this.visibleRange().startDate, this.dayWidth())
-  );
+  readonly todayIndicatorX = computed(() => {
+    const t = new Date();
+    const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    const snapped = this.snapDateToGridUnit(today);
+    return dateToX(snapped, this.visibleRange().startDate, this.dayWidth());
+  });
 
   readonly currentPeriodLabel = computed(() => {
     return TIMELINE_CURRENT_PERIOD_LABELS[this.zoom()];
@@ -117,6 +120,8 @@ export class TimelinePageComponent implements AfterViewInit {
   selectZoom(zoom: TimelineZoom): void {
     this.store.setZoom(zoom);
     this.timescaleOpen.set(false);
+    this.ghostRowId.set(null);
+    this.ghostLeft.set(0);
     queueMicrotask(() => this.centerToday());
   }
 
@@ -135,16 +140,23 @@ export class TimelinePageComponent implements AfterViewInit {
       this.ghostRowId.set(null);
       return;
     }
+    if (this.hoveredOrder()) {
+      this.ghostRowId.set(null);
+      return;
+    }
     const target = event.target as HTMLElement | null;
     if (target?.closest('.wo-bar') || target?.closest('.wo-menu')) {
       this.ghostRowId.set(null);
       return;
     }
-    const row = event.currentTarget as HTMLElement;
     const viewport = this.scrollViewport()?.nativeElement;
     if (!viewport) return;
-    const x = viewport.scrollLeft + (event.clientX - row.getBoundingClientRect().left);
-    const snappedX = this.snapXToGridUnit(x);
+    const cursorX = this.getCursorTimelineX(event, viewport);
+    if (this.isCursorNearAnyBar(workCenterId, cursorX)) {
+      this.ghostRowId.set(null);
+      return;
+    }
+    const snappedX = this.getSnappedTimelineX(cursorX);
     this.ghostRowId.set(workCenterId);
     this.ghostLeft.set(snappedX);
   }
@@ -155,13 +167,12 @@ export class TimelinePageComponent implements AfterViewInit {
     if (!target) return;
     if (target.closest('.wo-bar') || target.closest('.wo-menu') || target.closest('.wo-bar__dots')) return;
 
-    const row      = event.currentTarget as HTMLElement;
     const viewport = this.scrollViewport()?.nativeElement;
     if (!viewport) return;
 
-    const x = viewport.scrollLeft + (event.clientX - row.getBoundingClientRect().left);
-    const clickedDate = xToDate(x, this.visibleRange().startDate, this.dayWidth());
-    const snappedDate = this.snapDateToGridUnit(clickedDate);
+    const cursorX = this.getCursorTimelineX(event, viewport);
+    const snappedX = this.getSnappedTimelineX(cursorX);
+    const snappedDate = xToDate(snappedX, this.visibleRange().startDate, this.dayWidth());
 
     this.panelMode.set('create');
     this.selectedOrder.set(null);
@@ -213,20 +224,17 @@ export class TimelinePageComponent implements AfterViewInit {
 
 
   getBarStyle(order: WorkOrderDocument): Record<string, string> {
-    const start = fromIsoDate(order.data.startDate);
-    const end   = fromIsoDate(order.data.endDate);
-    const visibleStart = this.visibleRange().startDate;
-    const visibleEnd   = this.visibleRange().endDate;
-
-    const effectiveStart = start < visibleStart ? visibleStart : start;
-    const effectiveEnd   = end   > visibleEnd   ? visibleEnd   : end;
-    const left  = dateToX(effectiveStart, visibleStart, this.dayWidth());
-    const width = dateToX(addDays(effectiveEnd, 1), visibleStart, this.dayWidth()) - left;
+    const { left, width } = this.getBarMetrics(order);
 
     return {
       left:  `${Math.max(left, 0)}px`,
       width: `${Math.max(width, this.dayWidth() * 0.6)}px`
     };
+  }
+
+  isCompactBar(order: WorkOrderDocument): boolean {
+    const { width } = this.getBarMetrics(order);
+    return width < 180;
   }
 
   getOrdersForCenter(workCenterId: string): WorkOrderDocument[] {
@@ -316,19 +324,54 @@ export class TimelinePageComponent implements AfterViewInit {
   }
 
   private snapXToGridUnit(x: number): number {
-    const zoom = this.zoom();
-    const dw   = this.dayWidth();
-    if (zoom === 'week' || zoom === 'month') {
-      const date    = xToDate(x, this.visibleRange().startDate, dw);
-      const snapped = this.snapDateToGridUnit(date);
-      return Math.max(0, dateToX(snapped, this.visibleRange().startDate, dw));
-    }
-    return Math.floor(x / dw) * dw;
+    const dateAtCursor = xToDate(x, this.visibleRange().startDate, this.dayWidth());
+    const snappedDate = this.snapDateToGridUnit(dateAtCursor);
+    return dateToX(snappedDate, this.visibleRange().startDate, this.dayWidth());
   }
 
   private centerToday(): void {
     const viewport = this.scrollViewport()?.nativeElement;
     if (!viewport) return;
     viewport.scrollLeft = Math.max(this.todayIndicatorX() - viewport.clientWidth / 2, 0);
+  }
+
+  private getBarMetrics(order: WorkOrderDocument): { left: number; width: number } {
+    const start = fromIsoDate(order.data.startDate);
+    const end = fromIsoDate(order.data.endDate);
+    const visibleStart = this.visibleRange().startDate;
+    const visibleEnd = this.visibleRange().endDate;
+
+    const effectiveStart = start < visibleStart ? visibleStart : start;
+    const effectiveEnd = end > visibleEnd ? visibleEnd : end;
+    const left = dateToX(effectiveStart, visibleStart, this.dayWidth());
+    const width = dateToX(addDays(effectiveEnd, 1), visibleStart, this.dayWidth()) - left;
+
+    return { left, width };
+  }
+
+  private isCursorNearAnyBar(workCenterId: string, cursorX: number): boolean {
+    return this.getOrdersForCenter(workCenterId).some((order) => {
+      const { left, width } = this.getBarMetrics(order);
+      const start = left;
+      const end = left + Math.max(width, this.dayWidth() * 0.6);
+      return cursorX >= start && cursorX <= end;
+    });
+  }
+
+  private getCursorTimelineX(
+    event: MouseEvent,
+    viewport: HTMLDivElement
+  ): number {
+    const viewportRect = viewport.getBoundingClientRect();
+    const localX = event.clientX - viewportRect.left;
+    const clampedLocalX = Math.min(Math.max(localX, 0), viewport.clientWidth);
+    return viewport.scrollLeft + clampedLocalX;
+  }
+
+  private getSnappedTimelineX(cursorX: number): number {
+    const snappedX = this.snapXToGridUnit(cursorX);
+    const minX = 0;
+    const maxX = Math.max(this.totalWidth() - this.dayWidth(), 0);
+    return Math.min(Math.max(snappedX, minX), maxX);
   }
 }
