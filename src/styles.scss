@@ -1,0 +1,146 @@
+@import '@ng-select/ng-select/themes/default.theme.css';
+
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+:root {
+  --font-body: 'Circular-Std', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  // Neutral colors
+  --color-bg:             #f4f6f9;
+  --color-surface:        #ffffff;
+  --color-border:         #e2e8f0;
+  --color-border-light:   #eef1f6;
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted:     #94a3b8;
+  --color-text-label:     #334155;
+
+  // Primary indigo (matches Naologic branding + today indicator)
+  --color-primary-indigo: #6366f1;
+  --color-primary:        #6366f1;
+  --color-primary-dark:   #4f46e5;
+
+  // Status — Open (teal/cyan)
+  --status-open-bar-bg:   #f0fdff;
+  --status-open-border:   #67e8f9;
+  --status-open-bg:       #cffafe;
+  --status-open-text:     #0e7490;
+
+  // Status — In Progress (purple/violet)
+  --status-progress-bar-bg:  #faf5ff;
+  --status-progress-border:  #d8b4fe;
+  --status-progress-bg:      #ede9fe;
+  --status-progress-text:    #7c3aed;
+
+  // Status — Complete (green)
+  --status-complete-bar-bg:  #f0fdf4;
+  --status-complete-border:  #86efac;
+  --status-complete-bg:      #dcfce7;
+  --status-complete-text:    #16a34a;
+
+  // Status — Blocked (amber)
+  --status-blocked-bar-bg:   #fffbeb;
+  --status-blocked-border:   #fcd34d;
+  --status-blocked-bg:       #fef3c7;
+  --status-blocked-text:     #d97706;
+
+  // Shadows
+  --shadow-card:      0 1px 4px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.04);
+  --shadow-panel:     -4px 0 32px rgba(15, 23, 42, 0.10);
+  --shadow-menu:      0 4px 16px rgba(15, 23, 42, 0.10), 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-bar:       0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-bar-hover: 0 4px 10px rgba(15, 23, 42, 0.10);
+
+  // Radii
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+
+  // Layout
+  --left-col-width: 240px;
+  --row-height:     68px;
+  --header-height:  48px;
+}
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ─── ng-select global overrides ──────────────────────────────────────────────
+.ng-select .ng-select-container {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--color-border) !important;
+  min-height: 42px !important;
+  font-size: 14px;
+  font-family: var(--font-body);
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+.ng-select.ng-select-focused:not(.ng-select-opened) > .ng-select-container {
+  border-color: var(--color-primary-indigo) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14) !important;
+}
+
+.ng-select.ng-select-opened > .ng-select-container {
+  border-color: var(--color-primary-indigo) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14) !important;
+}
+
+.ng-select .ng-arrow-wrapper { padding-right: 10px; }
+
+.ng-dropdown-panel {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-menu) !important;
+  overflow: hidden;
+  margin-top: 4px !important;
+}
+
+.ng-dropdown-panel .ng-option {
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 10px 14px !important;
+  color: var(--color-text-primary);
+}
+
+.ng-dropdown-panel .ng-option.ng-option-selected,
+.ng-dropdown-panel .ng-option.ng-option-marked {
+  background-color: #f5f3ff !important;
+  color: var(--color-primary-indigo) !important;
+}
+
+// ─── ngb-datepicker global overrides ─────────────────────────────────────────
+ngb-datepicker {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-menu) !important;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.ngb-dp-day .btn-light {
+  border-radius: var(--radius-sm) !important;
+  font-family: var(--font-body);
+}
+
+.ngb-dp-day .btn-light:hover {
+  background-color: #f5f3ff !important;
+  color: var(--color-primary-indigo) !important;
+}
+
+.ngb-dp-day [ngbDatepickerDayView].bg-primary {
+  background-color: var(--color-primary-indigo) !important;
+}

@@ -1,0 +1,102 @@
+<aside
+  class="panel"
+  [class.panel--open]="visible"
+  role="dialog"
+  [attr.aria-modal]="visible"
+>
+
+  <div class="panel__header">
+    <div class="panel__header-text">
+      <h2 class="panel__title">Work Order Details</h2>
+      <p class="panel__subtitle">Specify the dates, name and status for this order</p>
+    </div>
+    <div class="panel__header-actions">
+      <button type="button" class="btn btn--ghost" (click)="closePanel()">Cancel</button>
+      <button type="button" class="btn btn--primary" (click)="submit()">
+        {{ mode === 'edit' ? 'Save' : 'Create' }}
+      </button>
+    </div>
+  </div>
+
+  <form [formGroup]="form" class="panel__body" (ngSubmit)="submit()" novalidate>
+
+    <div class="field" [class.field--error]="form.controls.name.touched && form.controls.name.invalid">
+      <label class="field__label" for="wo-name">Work Order Name</label>
+      <input
+        id="wo-name"
+        type="text"
+        class="field__input"
+        formControlName="name"
+        placeholder="Acme Inc."
+        autocomplete="off"
+      />
+      <p class="field__error" *ngIf="form.controls.name.touched && form.controls.name.invalid">
+        Work order name is required.
+      </p>
+    </div>
+
+    <div class="field">
+      <label class="field__label">Status</label>
+      <ng-select
+        class="status-select"
+        formControlName="status"
+        [clearable]="false"
+        [searchable]="false"
+        [items]="statusOptions"
+        bindLabel="label"
+        bindValue="value"
+      >
+        <ng-template ng-label-tmp let-item="item">
+          <span class="status-badge status-badge--{{ item.value }}">{{ item.label }}</span>
+        </ng-template>
+        <ng-template ng-option-tmp let-item="item" let-index="index">
+          <span class="status-opt status-opt--{{ item.value }}">{{ item.label }}</span>
+        </ng-template>
+      </ng-select>
+    </div>
+
+    <div class="field" [class.field--error]="form.controls.endDate.touched && form.controls.endDate.invalid">
+      <label class="field__label" for="wo-end">End date</label>
+      <input
+        id="wo-end"
+        class="field__input"
+        placeholder="MM.DD.YYYY"
+        formControlName="endDate"
+        ngbDatepicker
+        #endDp="ngbDatepicker"
+        autocomplete="off"
+        (click)="endDp.open()"
+        readonly
+      />
+      <p class="field__error" *ngIf="form.controls.endDate.touched && form.controls.endDate.invalid">
+        End date is required.
+      </p>
+    </div>
+
+    <div class="field" [class.field--error]="form.controls.startDate.touched && form.controls.startDate.invalid">
+      <label class="field__label" for="wo-start">Start date</label>
+      <input
+        id="wo-start"
+        class="field__input"
+        placeholder="MM.DD.YYYY"
+        formControlName="startDate"
+        ngbDatepicker
+        #startDp="ngbDatepicker"
+        autocomplete="off"
+        (click)="startDp.open()"
+        readonly
+      />
+      <p class="field__error" *ngIf="form.controls.startDate.touched && form.controls.startDate.invalid">
+        Start date is required.
+      </p>
+    </div>
+
+    <div class="form-error-box" *ngIf="(form.touched && form.errors?.['dateRange']) || submitError">
+      <p class="form-error-box__msg" *ngIf="form.touched && form.errors?.['dateRange']">
+        End date must be after start date.
+      </p>
+      <p class="form-error-box__msg" *ngIf="submitError">{{ submitError }}</p>
+    </div>
+
+  </form>
+</aside>

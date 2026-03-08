@@ -1,0 +1,166 @@
+<div class="page-wrap">
+
+  <header class="toolbar">
+    <div class="naologic-logo">NAOLOGIC</div>
+    <h1 class="toolbar__title">Work Orders</h1>
+
+    <div class="toolbar__controls">
+
+
+    <div class="timescale-wrap">
+      <button
+        type="button"
+        class="timescale-btn"
+        [class.timescale-btn--open]="timescaleOpen()"
+        (click)="$event.stopPropagation(); toggleTimescale()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="timescaleOpen()"
+      >
+        <span class="timescale-btn__label">Timescale</span>
+        <span class="timescale-btn__divider"></span>
+        <span class="timescale-btn__value">{{ activeZoomLabel() }}</span>
+        <svg class="timescale-btn__chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div
+        class="timescale-dropdown"
+        *ngIf="timescaleOpen()"
+        role="listbox"
+        (click)="$event.stopPropagation()"
+      >
+        <button
+          *ngFor="let opt of zoomOptions"
+          type="button"
+          class="timescale-dropdown__item"
+          [class.timescale-dropdown__item--active]="zoom() === opt.value"
+          role="option"
+          [attr.aria-selected]="zoom() === opt.value"
+          (click)="selectZoom(opt.value)"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
+    </div>
+
+    </div>
+  </header>
+
+  <div class="timeline-card">
+
+    <div class="wc-col">
+      <div class="wc-col__header">Work Center</div>
+      <div
+        class="wc-col__row"
+        *ngFor="let center of workCenters(); trackBy: trackByWorkCenter"
+        [class.wc-col__row--hover]="hoveredRowId() === center.docId"
+      >
+        <span class="wc-col__name">{{ center.data.name }}</span>
+      </div>
+    </div>
+
+    <div class="timeline-panel" #scrollViewport>
+
+      <div class="tl-header" [style.width.px]="totalWidth()">
+        <div
+          class="tl-header__cell"
+          *ngFor="let seg of headerSegments()"
+          [style.left.px]="seg.startIndex * dayWidth()"
+          [style.width.px]="seg.span * dayWidth()"
+          [class.tl-header__cell--today]="seg.isCurrentPeriod"
+        >
+          {{ seg.label }}
+        </div>
+
+        <div
+          class="tl-period-capsule"
+          [style.left.px]="todayIndicatorX()"
+        >
+          {{ currentPeriodLabel() }}
+        </div>
+      </div>
+
+      <div class="tl-today-line" [style.left.px]="todayIndicatorX()"></div>
+
+      <div
+        class="tl-row"
+        *ngFor="let center of workCenters(); trackBy: trackByWorkCenter"
+        [style.width.px]="totalWidth()"
+        [style.background-size]="gridColumnWidth() + 'px 100%'"
+        [class.tl-row--hover]="hoveredRowId() === center.docId"
+        [class.tl-row--menu-open]="rowHasOpenMenu(center.docId)"
+        (mouseenter)="onRowEnter(center.docId)"
+        (mouseleave)="onRowLeave()"
+        (mousemove)="onRowMouseMove($event, center.docId)"
+        (click)="onRowClick($event, center.docId)"
+      >
+        <div
+          class="wo-bar"
+          *ngFor="let order of getOrdersForCenter(center.docId); trackBy: trackByOrder"
+          [ngStyle]="getBarStyle(order)"
+          [ngClass]="'wo-bar--' + order.data.status"
+          [style.z-index]="openMenuOrderId() === order.docId ? 50 : null"
+          (mouseenter)="showTooltip($event, order)"
+          (mousemove)="moveTooltip($event)"
+          (mouseleave)="hideTooltip()"
+        >
+          <span class="wo-bar__name">{{ order.data.name }}</span>
+
+          <span class="wo-bar__badge" [ngClass]="'badge--' + order.data.status">
+            {{ statusLabel(order.data.status) }}
+          </span>
+
+          <button
+            class="wo-bar__dots"
+            type="button"
+            aria-label="Work order actions"
+            (click)="$event.stopPropagation(); toggleMenu(order.docId)"
+          >
+            <svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor">
+              <circle cx="2"  cy="2" r="1.5"/>
+              <circle cx="8"  cy="2" r="1.5"/>
+              <circle cx="14" cy="2" r="1.5"/>
+            </svg>
+          </button>
+
+          <div
+            class="wo-menu"
+            *ngIf="openMenuOrderId() === order.docId"
+            (click)="$event.stopPropagation()"
+          >
+            <button type="button" class="wo-menu__item wo-menu__item--edit" (click)="$event.stopPropagation(); openEdit(order)">Edit</button>
+            <button type="button" class="wo-menu__item wo-menu__item--delete" (click)="$event.stopPropagation(); deleteOrder(order)">Delete</button>
+          </div>
+        </div>
+
+        <div
+          class="wo-ghost-bar"
+          *ngIf="ghostRowId() === center.docId && !openMenuOrderId()"
+          [style.left.px]="ghostLeft()"
+          [style.width.px]="ghostWidth()"
+        >Click to add dates</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div
+  class="bar-tooltip"
+  *ngIf="hoveredOrder()"
+  [style.left.px]="tooltipX()"
+  [style.top.px]="tooltipY()"
+>{{ tooltipText() }}</div>
+
+<app-work-order-panel
+  [visible]="panelVisible()"
+  [mode]="panelMode()"
+  [workCenters]="workCenters()"
+  [selectedOrder]="selectedOrder()"
+  [prefillWorkCenterId]="prefillWorkCenterId()"
+  [prefillStartDateIso]="prefillStartDateIso()"
+  [submitError]="submitError()"
+  (panelClosed)="closePanel()"
+  (orderSubmitted)="submitOrder($event)"
+></app-work-order-panel>
