@@ -20,28 +20,28 @@
   --color-primary-dark:   #4f46e5;
 
   // Status — Open (teal/cyan)
-  --status-open-bar-bg:   #f0fdff;
-  --status-open-border:   #67e8f9;
-  --status-open-bg:       #cffafe;
-  --status-open-text:     #0e7490;
+  --status-open-bar-bg:   rgba(242, 254, 255, 1);
+  --status-open-border:   rgba(206, 251, 255, 1);
+  --status-open-bg:       rgba(228, 253, 255, 1);
+  --status-open-text:     rgba(0, 176, 191, 1);
 
   // Status — In Progress (purple/violet)
-  --status-progress-bar-bg:  #faf5ff;
-  --status-progress-border:  #d8b4fe;
-  --status-progress-bg:      #ede9fe;
-  --status-progress-text:    #7c3aed;
+  --status-progress-bar-bg:  rgba(237, 238, 255, 1);
+  --status-progress-border:  rgba(222, 224, 255, 1);
+  --status-progress-bg:      rgba(214, 216, 255, 1);
+  --status-progress-text:    rgba(62, 64, 219, 1);
 
   // Status — Complete (green)
-  --status-complete-bar-bg:  #f0fdf4;
-  --status-complete-border:  #86efac;
-  --status-complete-bg:      #dcfce7;
-  --status-complete-text:    #16a34a;
+  --status-complete-bar-bg:  rgba(248, 255, 243, 1);
+  --status-complete-border:  rgba(209, 250, 179, 1);
+  --status-complete-bg:      rgba(225, 255, 204, 1);
+  --status-complete-text:    rgba(8, 162, 104, 1);
 
   // Status — Blocked (amber)
-  --status-blocked-bar-bg:   #fffbeb;
-  --status-blocked-border:   #fcd34d;
-  --status-blocked-bg:       #fef3c7;
-  --status-blocked-text:     #d97706;
+  --status-blocked-bar-bg:   rgba(255, 252, 241, 1);
+  --status-blocked-border:   rgba(255, 245, 207, 1);
+  --status-blocked-bg:       rgba(252, 238, 181, 1);
+  --status-blocked-text:     rgba(177, 54, 0, 1);
 
   // Shadows
   --shadow-card:      0 1px 4px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.04);

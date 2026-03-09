@@ -6,6 +6,7 @@
 
     <div class="toolbar__controls">
 
+    <button type="button" class="today-btn" (click)="jumpToToday()">Today</button>
 
     <div class="timescale-wrap">
       <button
@@ -83,11 +84,19 @@
 
       <div class="tl-today-line" [style.left.px]="todayIndicatorX()"></div>
 
+      <!-- Segment-accurate vertical grid lines (replaces CSS background-size approach) -->
+      <div class="tl-grid-overlay" [style.width.px]="totalWidth()">
+        <div
+          class="tl-grid-overlay__line"
+          *ngFor="let x of segmentBoundaries(); trackBy: trackByBoundary"
+          [style.left.px]="x"
+        ></div>
+      </div>
+
       <div
         class="tl-row"
         *ngFor="let center of workCenters(); trackBy: trackByWorkCenter"
         [style.width.px]="totalWidth()"
-        [style.background-size]="gridColumnWidth() + 'px 100%'"
         [class.tl-row--hover]="hoveredRowId() === center.docId"
         [class.tl-row--menu-open]="rowHasOpenMenu(center.docId)"
         (mouseenter)="onRowEnter(center.docId)"
@@ -141,15 +150,11 @@
           [style.left.px]="ghostLeft()"
           [style.width.px]="ghostWidth()"
         >
-          <div class="wo-ghost-bar__label">Click to add dates</div>
+          <div class="wo-ghost-bar__label" [style.left.px]="ghostLabelLeft()">Click to add dates</div>
         </div>
       </div>
 
-    <div
-      class="tl-grid-extend"
-      [style.width.px]="totalWidth()"
-      [style.background-size]="gridColumnWidth() + 'px 100%'"
-    ></div>
+    <div class="tl-grid-extend" [style.width.px]="totalWidth()"></div>
 
     </div>
   </div>

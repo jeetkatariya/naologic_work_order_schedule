@@ -12,10 +12,9 @@ export interface TimelineHeaderSegment {
 }
 
 export const ZOOM_CONFIG: Record<TimelineZoom, ZoomConfig> = {
-  hour:  { dayWidth: 120, bufferDays: 4  },
-  day:   { dayWidth: 44,  bufferDays: 18 },
-  week:  { dayWidth: 20,  bufferDays: 70 },
-  month: { dayWidth: 8,   bufferDays: 210 }
+  day:   { dayWidth: 44,  bufferDays: 90  },
+  week:  { dayWidth: 20,  bufferDays: 180 },
+  month: { dayWidth: 8,   bufferDays: 365 }
 };
 
 export function buildDayColumns(startDate: Date, endDate: Date): Date[] {
@@ -40,16 +39,6 @@ export function xToDate(x: number, timelineStart: Date, dayWidth: number): Date 
 
 export function buildHeaderSegments(columns: Date[], zoom: TimelineZoom, dayWidth: number): TimelineHeaderSegment[] {
   const today = startOfDay(new Date());
-
-  if (zoom === 'hour') {
-    return columns.map((d, i) => ({
-      key: d.toISOString(),
-      label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
-      startIndex: i,
-      span: 1,
-      isCurrentPeriod: d.getTime() === today.getTime()
-    }));
-  }
 
   if (zoom === 'day') {
     return columns.map((d, i) => ({
@@ -106,24 +95,6 @@ export function buildHeaderSegments(columns: Date[], zoom: TimelineZoom, dayWidt
   return segments;
 }
 
-export function buildHourTicks(columns: Date[], dayWidth: number): TimelineHeaderSegment[] {
-  const pxPerHour = dayWidth / 24;
-  const marks: TimelineHeaderSegment[] = [];
-
-  for (let i = 0; i < columns.length; i++) {
-    for (let h = 0; h < 24; h += 6) {
-      marks.push({
-        key: `${columns[i].toISOString()}-h${h}`,
-        label: `${String(h).padStart(2, '0')}:00`,
-        startIndex: i,
-        span: 0,
-        leftPx:  i * dayWidth + h * pxPerHour,
-        widthPx: 6 * pxPerHour
-      });
-    }
-  }
-  return marks;
-}
 
 function getWeekNumber(date: Date): number {
   const copy = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));

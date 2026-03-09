@@ -1,177 +1,133 @@
-# Work Order Schedule Timeline
+# Work Order Schedule — Naologic
 
-Angular 17 implementation of the Naologic frontend technical test — a manufacturing work-order scheduling timeline.
+An Angular 17 work order scheduling timeline. Displays work orders across work centers on an interactive Gantt-style grid with create, edit, and delete capabilities.
 
 ---
 
-## How to Run
+## Setup
 
 **Prerequisites:** Node.js ≥ 18, npm ≥ 9
 
 ```bash
-# Install dependencies
 npm install
-
-# Start dev server
 npm start
 # → http://localhost:4200
 ```
 
-```bash
-# Production build
-npm run build
-```
+No environment variables or backend services required. The app is fully self-contained with hardcoded sample data and `localStorage` persistence.
 
+---
+
+## Tests
+
+**Unit tests** (Karma + Jasmine — 43 tests):
 ```bash
-# Run unit tests (headless)
+ng test
+# or headless:
 npm test -- --watch=false --browsers=ChromeHeadless
 ```
 
-No environment variables or backend services are required. The app is fully self-contained with hardcoded sample data and localStorage persistence.
-
----
-
-## Approach
-
-### Architecture
-
-The app is structured around three layers:
-
-1. **Core** (`src/app/core/`) — models, sample data, date utilities. No Angular-specific code; pure TypeScript.
-2. **Store** (`timeline.store.ts`) — Angular injectable using signals as the reactive state layer. Owns all CRUD operations and overlap validation. Persists to localStorage.
-3. **Features** (`src/app/features/`) — two standalone components:
-   - `TimelinePageComponent` — the main grid, interactions, tooltip, timescale switching
-   - `WorkOrderPanelComponent` — the create/edit slide-out panel with reactive form
-
-### Timeline Positioning
-
-All bar positions are calculated as pixel offsets from the visible range start:
-
+**E2E tests** (Cypress — 19 scenarios, requires dev server running):
+```bash
+npm run e2e          # headless
+npm run e2e:open     # interactive UI
 ```
-left  = diffInDays(startDate, visibleRangeStart) × dayWidth
-width = diffInDays(endDate + 1, visibleRangeStart) × dayWidth − left
-```
-
-Zoom levels change only `dayWidth` and `bufferDays` — the same date math applies at every scale.
-
-### State Management
-
-Angular signals (`signal`, `computed`) are used throughout — no RxJS, no NgRx. `TimelineStore` is `providedIn: 'root'` and exposes read-only signals; mutations go through typed methods that return `{ ok: true } | { ok: false; error: string }`.
-
----
-
-## Libraries Used
-
-| Library | Why |
-|---------|-----|
-| `@ng-select/ng-select` | Spec-required; provides the Status dropdown with custom option templates |
-| `@ng-bootstrap/ng-bootstrap` | Spec-required; `NgbDatepicker` with a custom `NgbDateParserFormatter` for MM.DD.YYYY display |
-| `bootstrap` | Base CSS reset and utility layer; ng-bootstrap peer dependency |
-| Angular Signals | Reactive state without RxJS boilerplate; fine-grained updates without OnPush needed |
 
 ---
 
 ## Features Implemented
 
-### Core (Required)
-- Timeline grid — fixed work-center column, horizontally scrollable timeline
-- Current day indicator — indigo vertical line + dark "Current week/month/…" capsule
-- Zoom levels: **Hour / Day / Week / Month** — header segments and grid lines adapt per zoom
-- Work order bars — date-based positioning, all 4 status colours and badges
-- Three-dot menu (hover-only) — Edit / Delete actions
-- Create panel — click empty timeline row, start date prefilled from click position, end date = start + 7 days
-- Edit panel — opens from three-dot menu, form prepopulated, Save/Create button label changes per mode
-- Overlap detection — blocks create/save, surfaces error inline in form
-- Reactive form validation — required fields, end-date-after-start-date cross-validator
+### Timeline Grid
+- Fixed left column listing work centers; horizontally scrollable right panel for the timeline
+- Three zoom levels — **Day**, **Week**, **Month** — via a timescale split-pill button; header segments and grid-line spacing adapt per zoom
+- Vertical grid lines are rendered from the same segment-boundary data as the header cells, so lines align exactly at week/month boundaries regardless of variable month lengths
+- **Today indicator** — indigo vertical line positioned at the current date; in Day view it tracks the current hour
+- **Current period capsule** — a floating label ("Current day / week / month") above the today line
+- **Today button** — scrolls the viewport to center on today
 
-### Bonus
-- **localStorage persistence** — work orders survive page refresh (versioned key `v2` discards stale data)
-- **Smooth animations** — panel slides in/out 240 ms cubic-bezier, dropdown fade-in, bar hover lift
-- **Keyboard navigation** — Escape closes panel/menu/dropdown
-- **Today button** — jumps viewport to center on today
-- **Tooltip on bar hover** — shows name, status, date range
-- **Click outside closes panel** — clicking the timeline area dismisses the panel; datepicker/ng-select portals excluded
-- **Unit tests** — 7 tests covering date math, overlap logic, localStorage, form validation
+### Work Order Bars
+- Each bar is positioned and sized by date math: `left = diffInDays(start, rangeStart) × dayWidth`, width derived similarly
+- Color-coded and labeled by status: Open, In Progress, Complete, Blocked
+- Status badge shown inside the bar; hidden in compact mode (bar too narrow)
+- **Tooltip** follows the cursor showing work order name, status, and date range
+- **Three-dot menu** (⋯) appears on bar hover — exposes **Edit** and **Delete**
+
+### Create / Edit Panel
+- Click any empty area on a timeline row to open the create panel
+- Click position is snapped to the active zoom unit: exact day in Day view, Monday of the week in Week view, 1st of the month in Month view
+- A **ghost bar** highlights the snapped slot before clicking; the label re-centers to stay within the bar bounds
+- Panel fields: **Name**, **Status**, **End Date**, **Start Date** — all required
+- Dates displayed and entered as `MM.DD.YYYY` via a custom `NgbDateParserFormatter`
+- Cross-field validation: end date must be after start date
+- Overlap detection: blocked when a work order for the same work center overlaps an existing date range; error shown inline
+- Edit pre-fills all fields from the selected work order
+- Panel closes on Escape, on clicking outside, or on successful submit
+
+### Infinite Scroll
+- Visible date range expands automatically when scrolling within 400 px of either edge
+- Each expansion adds 180 days on the respective side
+- Prepending compensates the scroll offset via `requestAnimationFrame` so the viewport does not jump
+- Scroll listener runs outside Angular's zone to avoid unnecessary change-detection cycles
+
+### State & Persistence
+- Signal-based in-memory store (`TimelineStore`) using Angular `signal` and `computed` — no RxJS, no NgRx
+- Work orders persist to `localStorage` and survive page refresh
+- CRUD mutations return `{ ok: true } | { ok: false; error: string }`
+
+### UX
+- Row hover highlight synced between the work-center column and the timeline row
+- Keyboard: Escape closes open panel, menu, and dropdown
+- Click outside dismisses the panel (datepicker and ng-select portals excluded from this check)
 
 ---
 
 ## Sample Data
 
-| # | Work Center | Work Order | Status |
-|---|-------------|------------|--------|
-| 1 | Genesis Hardware | Centrix Ltd | complete |
-| 2 | Genesis Hardware | Genesis Batch B | in-progress |
-| 3 | Rodriques Electrics | Rodriques Electrics | in-progress |
-| 4 | Konsulting Inc | Konsulting Inc | in-progress |
-| 5 | Konsulting Inc | Compleks Systems | in-progress |
-| 6 | McMarrow Distribution | McMarrow Distribution | blocked |
-| 7 | Spartan Manufacturing | Spartan Distribution | open |
-| 8 | Spartan Manufacturing | Spartan Express Run | complete |
+6 work centers, 3 work orders each (18 total), covering all four status types with a spread of past, current, and future dates:
 
-All dates are relative to today so bars are always visible on load.
+| Work Center | Work Orders |
+|---|---|
+| Genesis Hardware | Sheet Metal Press Run A · CNC Machining Batch B · Hardware Assembly Run C |
+| Rodriques Electrics | Transformer Overhaul · Panel Wiring Phase 1 · Circuit Board Assembly |
+| Konsulting Inc | Process Audit Sprint A · ERP Integration Sprint B · Systems Audit Q3 |
+| McMarrow Distribution | East Coast Delivery Run · Cross-Dock Freight Batch · Warehouse Restock B |
+| Spartan Manufacturing | Steel Press Production Q1 · Stamping Run Batch 7 · Finishing Line Q2 |
+| Frontier Logistics | North Region Haul Q4 · South Region Delivery · Cross-Country Freight Q1 |
 
 ---
 
-## File Map
+## Libraries Used
 
-```
-src/app/
-├── core/
-│   ├── data/sample-data.ts          — hardcoded work centers + work orders
-│   ├── models/                       — TypeScript interfaces (WorkCenter, WorkOrder, Timeline)
-│   └── utils/date.utils.ts           — addDays, diffInDays, fromIsoDate, rangesOverlap
-├── features/
-│   ├── timeline/
-│   │   ├── timeline.store.ts         — signal-based state, CRUD, overlap validation, localStorage
-│   │   ├── timeline-math.ts          — dateToX, xToDate, buildDayColumns, buildHeaderSegments
-│   │   ├── timeline-page.component.* — main grid UI, interactions, timescale switching
-│   │   └── *.spec.ts                 — unit tests for math and store
-│   └── work-order-panel/
-│       ├── work-order-panel.component.* — create/edit reactive form panel
-│       └── *.spec.ts                    — form validation tests
-└── styles.scss                       — design tokens (CSS custom properties), ng-select/datepicker overrides
-```
+| Library | Version | Purpose |
+|---|---|---|
+| Angular | 17.3 | Framework — standalone components, signals, reactive forms |
+| @ng-select/ng-select | 12 | Status dropdown in the work order panel |
+| @ng-bootstrap/ng-bootstrap | 16 | Date-picker calendar widget |
+| Bootstrap | 5.3 | Peer dependency required by ng-bootstrap |
+| Karma + Jasmine | 6.4 / 5.1 | Unit and component tests |
+| Cypress | 15 | End-to-end browser tests |
 
 ---
 
-## Loom Demo Checklist
-
-- [ ] Show Day / Week / Month switching and grid adapting
-- [ ] Create new work order by clicking empty timeline row
-- [ ] Edit existing order via three-dot menu
-- [ ] Delete existing order via three-dot menu
-- [ ] Trigger overlap error scenario
-- [ ] Show localStorage persistence (refresh page)
-- [ ] Brief walkthrough of `timeline.store.ts` and `timeline-math.ts`
-
----
-
-## Design Assets
-
-The Sketch file and all exported artboards live in `src/assets/designs/`:
+## Project Structure
 
 ```
-src/assets/designs/
-├── FE Take-Home Challenge.sketch          ← source design file
-├── Work Order Schedule - Default.png
-├── Work Order Schedule - View Selection.png
-├── Work Order Schedule - Options CTA Controls (shown on hover).png
-├── Work Order Schedule - Edit and Delete Controls Expanded.png
-├── Work Order Schedule - Create New Event - With Selection.png
-├── Work Order Schedule - Create New Event - Placeholder and Defaults.png
-├── Work Order Schedule - Create New Event - Active Text Field.png
-├── Work Order Schedule - Create New Event - Status Dropdown.png
-├── Triangle*.svg                          ← cursor/pointer SVG exports
-└── Cursor/Hand/Pointing.svg
+src/
+  app/
+    core/
+      data/sample-data.ts            seed work centers and work orders
+      models/                        TypeScript interfaces (WorkCenter, WorkOrder, Timeline)
+      utils/date.utils.ts            addDays, diffInDays, fromIsoDate, rangesOverlap
+    features/
+      timeline/
+        timeline.store.ts            signal-based state, CRUD, overlap validation, localStorage
+        timeline-math.ts             dateToX, xToDate, buildDayColumns, buildHeaderSegments
+        timeline-page.component.*    main grid, interactions, timescale switching
+        *.spec.ts                    unit tests for math and store
+      work-order-panel/
+        work-order-panel.component.* create/edit reactive form panel
+        *.spec.ts                    form and validation tests
+  styles.scss                        design tokens (CSS custom properties), global overrides
+cypress/
+  e2e/timeline.cy.ts                 E2E test suite
 ```
-
-They are included in the Angular build via the `assets` entry in `angular.json` and are available at `/assets/designs/…` at runtime.
-
----
-
-## Trade-offs & Notes
-
-- **Hour zoom** is included beyond the spec's Day/Week/Month for completeness; it uses 120 px/day and a ±4-day buffer.
-- **Work Center is not shown** in the create/edit panel — it is inferred from the row the user clicked, matching the reference design. For the edit flow the existing `workCenterId` is preserved.
-- **No virtual scrolling** — the visible range is bounded by `bufferDays` so the DOM stays manageable. Infinite scroll is tagged `@upgrade` in `timeline.store.ts`.
-- **Date format** — MM.DD.YYYY with dot separators via a custom `NgbDateParserFormatter`; matches the Sketch reference placeholder.
