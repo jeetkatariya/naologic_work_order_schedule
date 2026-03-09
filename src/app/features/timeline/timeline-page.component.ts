@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   HostListener,
+  NgZone,
   computed,
   inject,
   signal,
@@ -28,7 +29,8 @@ type PanelMode = 'create' | 'edit';
   styleUrl: './timeline-page.component.scss'
 })
 export class TimelinePageComponent implements AfterViewInit {
-  private readonly store = inject(TimelineStore);
+  private readonly store  = inject(TimelineStore);
+  private readonly ngZone = inject(NgZone);
 
   readonly scrollViewport = viewChild<ElementRef<HTMLDivElement>>('scrollViewport');
 
@@ -43,14 +45,19 @@ export class TimelinePageComponent implements AfterViewInit {
   readonly gridColumnWidth = computed(() => {
     const dw = this.dayWidth();
     switch (this.zoom()) {
-      case 'week':  return 7  * dw;   
-      case 'month': return 30 * dw;   
-      default:      return dw;        
+      case 'week':  return 7  * dw;
+      case 'month': return 30 * dw;
+      default:      return dw;
     }
   });
 
   readonly headerSegments = computed<TimelineHeaderSegment[]>(() =>
     buildHeaderSegments(this.columns(), this.zoom(), this.dayWidth())
+  );
+
+  // Pixel X positions of each segment's left edge — used to draw accurate grid lines
+  readonly segmentBoundaries = computed(() =>
+    this.headerSegments().map(seg => seg.startIndex * this.dayWidth())
   );
 
   readonly zoomOptions = TIMELINE_ZOOM_OPTIONS;
@@ -61,6 +68,7 @@ export class TimelinePageComponent implements AfterViewInit {
 
   readonly ghostRowId = signal<string | null>(null);
   readonly ghostLeft  = signal<number>(0);
+  readonly ghostAnchorX = signal<number>(0);
 
   readonly ghostWidth = computed(() => {
     const zoom = this.zoom();
@@ -74,6 +82,17 @@ export class TimelinePageComponent implements AfterViewInit {
     return this.gridColumnWidth();
   });
 
+  readonly ghostLabelLeft = computed(() => {
+    if (this.zoom() !== 'month') {
+      return this.ghostWidth() / 2;
+    }
+    const rawLeft = this.ghostAnchorX() - this.ghostLeft();
+    const edgePadding = 18;
+    const minLeft = edgePadding;
+    const maxLeft = Math.max(this.ghostWidth() - edgePadding, minLeft);
+    return Math.min(Math.max(rawLeft, minLeft), maxLeft);
+  });
+
   readonly panelVisible       = signal(false);
   readonly panelMode          = signal<PanelMode>('create');
   readonly selectedOrder      = signal<WorkOrderDocument | null>(null);
@@ -83,15 +102,27 @@ export class TimelinePageComponent implements AfterViewInit {
 
   readonly openMenuOrderId    = signal<string | null>(null);
 
+  // Infinite scroll
+  private expandingLeft  = false;
+  private expandingRight = false;
+  private readonly SCROLL_THRESHOLD = 400; // px from edge before expanding
+  private readonly EXPAND_DAYS      = 180; // days to add per expansion
+
   readonly hoveredOrder = signal<WorkOrderDocument | null>(null);
   readonly tooltipX     = signal(0);
   readonly tooltipY     = signal(0);
 
   readonly todayIndicatorX = computed(() => {
-    const t = new Date();
-    const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-    const snapped = this.snapDateToGridUnit(today);
-    return dateToX(snapped, this.visibleRange().startDate, this.dayWidth());
+    const now     = new Date();
+    const today   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const baseX   = dateToX(today, this.visibleRange().startDate, this.dayWidth());
+    // Day view: shift by the current hour so the line tracks intra-day progress
+    if (this.zoom() === 'day') {
+      const hourFraction = (now.getHours() + now.getMinutes() / 60) / 24;
+      return baseX + hourFraction * this.dayWidth();
+    }
+    // Week/month: position exactly at today's date column (not snapped to period start)
+    return baseX;
   });
 
   readonly currentPeriodLabel = computed(() => {
@@ -110,6 +141,13 @@ export class TimelinePageComponent implements AfterViewInit {
 
   ngAfterViewInit(): void {
     this.centerToday();
+    // Attach scroll listener outside Angular's zone to avoid triggering CD on every scroll pixel
+    const viewport = this.scrollViewport()?.nativeElement;
+    if (viewport) {
+      this.ngZone.runOutsideAngular(() => {
+        viewport.addEventListener('scroll', () => this.onTimelineScroll(), { passive: true });
+      });
+    }
   }
 
 
@@ -122,6 +160,7 @@ export class TimelinePageComponent implements AfterViewInit {
     this.timescaleOpen.set(false);
     this.ghostRowId.set(null);
     this.ghostLeft.set(0);
+    this.ghostAnchorX.set(0);
     queueMicrotask(() => this.centerToday());
   }
 
@@ -133,6 +172,7 @@ export class TimelinePageComponent implements AfterViewInit {
   onRowLeave(): void {
     this.hoveredRowId.set(null);
     this.ghostRowId.set(null);
+    this.ghostAnchorX.set(0);
   }
 
   onRowMouseMove(event: MouseEvent, workCenterId: string): void {
@@ -159,6 +199,7 @@ export class TimelinePageComponent implements AfterViewInit {
     const snappedX = this.getSnappedTimelineX(cursorX);
     this.ghostRowId.set(workCenterId);
     this.ghostLeft.set(snappedX);
+    this.ghostAnchorX.set(cursorX);
   }
 
 
@@ -201,6 +242,7 @@ export class TimelinePageComponent implements AfterViewInit {
   toggleMenu(orderId: string): void {
     this.openMenuOrderId.set(this.openMenuOrderId() === orderId ? null : orderId);
     this.ghostRowId.set(null);
+    this.ghostAnchorX.set(0);
   }
 
   jumpToToday(): void {
@@ -262,6 +304,7 @@ export class TimelinePageComponent implements AfterViewInit {
 
   trackByWorkCenter(_: number, c: { docId: string }): string { return c.docId; }
   trackByOrder(_: number, o: WorkOrderDocument): string       { return o.docId; }
+  trackByBoundary(_: number, x: number): number               { return x; }
 
 
   showTooltip(event: MouseEvent, order: WorkOrderDocument): void {
@@ -327,6 +370,32 @@ export class TimelinePageComponent implements AfterViewInit {
     const dateAtCursor = xToDate(x, this.visibleRange().startDate, this.dayWidth());
     const snappedDate = this.snapDateToGridUnit(dateAtCursor);
     return dateToX(snappedDate, this.visibleRange().startDate, this.dayWidth());
+  }
+
+  private onTimelineScroll(): void {
+    const viewport = this.scrollViewport()?.nativeElement;
+    if (!viewport) return;
+
+    // Expand LEFT when approaching the left edge
+    if (viewport.scrollLeft < this.SCROLL_THRESHOLD && !this.expandingLeft) {
+      this.expandingLeft = true;
+      const addedPx = this.EXPAND_DAYS * this.dayWidth();
+      // Run signal update inside Angular's zone so change detection fires
+      this.ngZone.run(() => this.store.expandLeft(this.EXPAND_DAYS));
+      // After Angular renders the new columns, shift scroll right to compensate
+      requestAnimationFrame(() => {
+        viewport.scrollLeft += addedPx;
+        this.expandingLeft = false;
+      });
+    }
+
+    // Expand RIGHT when approaching the right edge
+    const distFromRight = viewport.scrollWidth - viewport.scrollLeft - viewport.clientWidth;
+    if (distFromRight < this.SCROLL_THRESHOLD && !this.expandingRight) {
+      this.expandingRight = true;
+      this.ngZone.run(() => this.store.expandRight(this.EXPAND_DAYS));
+      requestAnimationFrame(() => { this.expandingRight = false; });
+    }
   }
 
   private centerToday(): void {

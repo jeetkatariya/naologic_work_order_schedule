@@ -1,4 +1,4 @@
-export type TimelineZoom = 'hour' | 'day' | 'week' | 'month';
+export type TimelineZoom = 'day' | 'week' | 'month';
 
 export interface ZoomConfig {
   dayWidth: number;

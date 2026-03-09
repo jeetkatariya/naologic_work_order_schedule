@@ -23,6 +23,7 @@ import { addDays, fromIsoDate, toIsoDate } from '../../core/utils/date.utils';
 import { WorkOrderDraft } from '../timeline/timeline.store';
 
 type PanelMode = 'create' | 'edit';
+type DateField = 'start' | 'end';
 
 interface FormModel {
   name:         FormControl<string>;
@@ -91,10 +92,6 @@ export class WorkOrderPanelComponent implements OnChanges {
   );
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['visible']) {
-      console.log('[Panel] visible changed →', this.visible, '| mode:', this.mode);
-    }
-
     const panelJustOpened = changes['visible'] && this.visible;
     const relevantInputChanged = this.visible && (
       changes['selectedOrder'] ||
@@ -108,11 +105,11 @@ export class WorkOrderPanelComponent implements OnChanges {
     }
   }
 
-  onDateClick(field: 'start' | 'end'): void {
-    console.log(`[Panel] ${field} date field clicked`);
-  }
-
   closePanel(): void { this.panelClosed.emit(); }
+
+  onDateClick(_: DateField): void {
+    // Reserved hook for date-field-specific behavior; keeps template bindings valid.
+  }
 
   submit(): void {
     this.form.markAllAsTouched();
